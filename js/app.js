@@ -1,3 +1,8 @@
+let header = document.querySelector('header');
+let headline = document.createElement('h1');
+header.appendChild(headline);
+headline.textContent = '___ has been clicked ___ times.';
+
 const images = ['bag.jpg', 'banana.jpg', 'bathroom.jpg', 'boots.jpg', 'breakfast.jpg', 'bubblegum.jpg', 'chair.jpg', 'cthulhu.jpg', 'dog-duck.jpg', 'pen.jpg', 'pet-sweep.jpg', 'scissors.jpg', 'shark.jpg', 'sweep.png', 'tauntaun.jpg', 'unicorn.jpg', 'water-can.jpg', 'wine-glass.jpg'];
 const imgDirectory = 'img/';
 
@@ -14,7 +19,7 @@ Product.prototype.clickEvent = function(){
   let p = this;
   return function(event){
     p.clicked++;
-    console.log(`${p.name} has been clicked ${p.clicked} times.`);
+    headline.textContent = `${p.name} has been clicked ${p.clicked} times.`;
   };
 };
 
@@ -30,7 +35,6 @@ function ProductCollection(imagesArray, directory){
     return products;
   })(imagesArray, directory);
 }
-
 
 let products = new ProductCollection(images, imgDirectory);
 
