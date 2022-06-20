@@ -1,3 +1,4 @@
+'use strict';
 
 let header = document.querySelector('header');
 let main = document.querySelector('main');
@@ -70,5 +71,3 @@ ProductCollection.prototype.display = function(element){
 let products = new ProductCollection(images, imgDirectory);
 products.selectCurrent(3);
 products.display(main);
-
-
