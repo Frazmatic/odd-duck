@@ -1,4 +1,6 @@
+
 let header = document.querySelector('header');
+let main = document.querySelector('main');
 let headline = document.createElement('h1');
 header.appendChild(headline);
 headline.textContent = '___ has been clicked ___ times.';
@@ -10,8 +12,8 @@ function Product(filename, directory){
   this.filepath = `./${directory}${filename}`;
   this.shown = 0;
   this.clicked = 0;
-  this.imgElement = document.createElement('img');
-  this.imgElement.src = this.filepath;
+  this.element = document.createElement('img');
+  this.element.src = this.filepath;
 }
 
 Product.prototype.clickEvent = function(){
@@ -28,17 +30,45 @@ function ProductCollection(imagesArray, directory){
     let products = [];
     for (let filename of fileList){
       let product = new Product(filename, dir);
-      product.imgElement.addEventListener('click', product.clickEvent());
+      product.element.addEventListener('click', product.clickEvent());
       products.push(product);
     }
     return products;
   })(imagesArray, directory);
 }
 
+ProductCollection.prototype.isInCurrent = function(product){
+  for(let currentProd of this.currentProducts){
+    if (product.name === currentProd.name){
+      return true;
+    }
+  }
+  return false;
+};
+
+ProductCollection.prototype.selectCurrent = function(howMany){
+  this.currentProducts = [];
+  while (this.currentProducts.length < howMany && this.currentProducts.length <= this.allProducts.length){
+    let prod = this.allProducts[Math.floor(Math.random() * this.allProducts.length)];
+    if (this.isInCurrent(prod)){
+      continue;
+    }
+    else {
+      this.currentProducts.push(prod);
+    }
+  }
+};
+
+ProductCollection.prototype.display = function(element){
+  element.innerHTML = '';
+  for(let prod of this.currentProducts){
+    prod.shown++;
+    element.appendChild(prod.element);
+  }
+};
+
 let products = new ProductCollection(images, imgDirectory);
+products.selectCurrent(3);
+products.display(main);
 
-let main = document.querySelector('main');
 
-for (let p of products.allProducts){
-  main.appendChild(p.imgElement);
-}
