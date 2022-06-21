@@ -9,6 +9,16 @@ img {
     object-fit: cover;
 }
 
+button {
+    width: 50%;
+    height: 20%;
+    align-self: center;
+    justify-self: center;
+    background-color: red;
+    color: white;
+
+}
+
 header {
     text-align: center;
 }
