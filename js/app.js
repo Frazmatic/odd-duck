@@ -60,7 +60,7 @@ ProductCollection.prototype.display = function(){
     p.shown++;
     this.displayElement.appendChild(e);
   }
-  console.log(this.rounds);
+
   if (this.rounds >= 25) {
     let button = document.createElement('button');
     button.innerText = 'View Results';
@@ -92,21 +92,23 @@ function isIn(item, array){
 }
 
 ProductCollection.prototype.selectCurrent = function(howMany){
+  let newKeys = [];
+  let currentKeys =Object.keys(this.currentProducts);
   let allKeys = Object.keys(this.allProducts);
-  let newIndexes = [];
-  while (newIndexes.length < howMany && newIndexes.length <= allKeys.length){
-    let randomIndex = Math.floor(Math.random() * allKeys.length);
-    if (isIn(randomIndex, newIndexes)){
+  this.currentProducts = {};
+
+  while (newKeys.length < howMany && newKeys.length <= allKeys.length){
+    let key = allKeys[Math.floor(Math.random() * allKeys.length)];
+    if (isIn(key, newKeys) || isIn(key, currentKeys)){
       continue;
     }
-    else{
-      newIndexes.push(randomIndex);
+    else {
+      newKeys.push(key);
     }
   }
 
-  this.currentProducts = {};
-  for (let i of newIndexes){
-    this.currentProducts[allKeys[i]] = this.allProducts[allKeys[i]];
+  for (let key of newKeys){
+    this.currentProducts[key] = this.allProducts[key];
   }
 };
 
