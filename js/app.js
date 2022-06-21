@@ -28,14 +28,6 @@ ProductCollection.prototype.handleClick = function(product){
   };
 };
 
-ProductCollection.prototype.handleButton = function(){
-  let collection = this;
-  return function(event){
-    collection.rounds = 0;
-    collection.displayResults();
-  }
-};
-
 ProductCollection.prototype.addAllProducts = function(imagesArray, directory){
   let products = {};
   for (let filename of imagesArray){
@@ -51,6 +43,13 @@ ProductCollection.prototype.addAllProducts = function(imagesArray, directory){
 };
 
 ProductCollection.prototype.display = function(){
+  if (this.rounds >= maxRounds) {
+    controller.abort();
+    this.rounds = 0;
+    this.displayResults();
+    return;
+  }
+
   this.displayElement.innerHTML = '';
   this.selectCurrent(3);
 
@@ -60,26 +59,46 @@ ProductCollection.prototype.display = function(){
     p.shown++;
     this.displayElement.appendChild(e);
   }
-
-  if (this.rounds >= 25) {
-    let button = document.createElement('button');
-    button.innerText = 'View Results';
-    button.addEventListener('click', this.handleButton());
-    this.displayElement.appendChild(button);
-    controller.abort();
-  }
 };
 
 ProductCollection.prototype.displayResults = function(){
-  this.displayElement.innerHTML = '';
-  let ul = document.createElement('ul');
-  for (let p in this.allProducts){
+  let labels = [];
+  let clicks = [];
+  let showns = [];
+
+  for(let p in this.allProducts){
     let prod = this.allProducts[p].product;
-    let li = document.createElement('li');
-    li.textContent = `${prod.name} had ${prod.clicked} votes, and was seen ${prod.shown} times.`;
-    ul.appendChild(li);
+    labels.push(prod.name);
+    clicks.push(prod.clicked);
+    showns.push(prod.shown);
   }
-  this.displayElement.appendChild(ul);
+
+  const data = {
+    labels: labels,
+    datasets:
+      [
+        {
+          label: 'Selected',
+          backgroundColor: 'blue',
+          data: clicks,
+        },
+        {
+          label: 'Total Views',
+          backgroundColor: 'green',
+          data: showns,
+        }
+      ]
+  };
+
+  const config = {
+    type: 'bar',
+    data: data,
+    options: {}
+  };
+
+  let canv = document.getElementById('mychart');
+  const mychart = new Chart(canv, config);
+
 };
 
 function isIn(item, array){
@@ -117,5 +136,3 @@ let products = new ProductCollection(main);
 products.addAllProducts(images, imgDirectory);
 products.selectCurrent(3);
 products.display();
-
-
