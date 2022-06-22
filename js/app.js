@@ -1,63 +1,101 @@
 'use strict';
 
-const images = ['bag.jpg', 'banana.jpg', 'bathroom.jpg', 'boots.jpg', 'breakfast.jpg', 'bubblegum.jpg', 'chair.jpg', 'cthulhu.jpg', 'dog-duck.jpg', 'pen.jpg', 'pet-sweep.jpg', 'scissors.jpg', 'shark.jpg', 'sweep.png', 'tauntaun.jpg', 'unicorn.jpg', 'water-can.jpg', 'wine-glass.jpg'];
-const imgDirectory = 'img/';
-let maxRounds = 25;
-const controller = new AbortController();
-
 function Product(filename, directory){
   this.name = filename.split('.')[0];
-  this.filepath = `./${directory}${filename}`;
+  this.filepath = `./${directory}/${filename}`;
+  this.domNode = (function(filepath){let img = document.createElement('img'); img.src = filepath; return img;})(this.filepath);
   this.shown = 0;
   this.clicked = 0;
 }
 
-function ProductCollection(displayArea){
-  this.currentProducts = {}; //{product: p, element: e}
-  this.allProducts = {}; //{product: p, element: e}
-  this.displayElement = displayArea; //e.g. main
+Product.load = function(JSONProduct){
+  // './img/bag.jpg'
+  let fileInformation = JSONProduct.filepath.split('/');
+  let filename = fileInformation[fileInformation.length - 1];
+  let directory = fileInformation[fileInformation.length - 2];
+  let prod = new Product(filename, directory);
+  prod.shown = JSONProduct.shown;
+  prod.clicked = JSONProduct.clicked;
+  return prod;
+
+};
+
+function ProductCollection(filenameArray, directory, displayArea, maxRounds, selectionSize){
+  this.displayElement = displayArea;
   this.rounds = 0;
+  this.maxRounds = maxRounds;
+  this.size = selectionSize;
+  this.currentProducts = [];
+  this.allProducts = (function(filenameArray, directory){
+    let products = [];
+    for(let filename of filenameArray){
+      let p = new Product(filename, directory);
+      products.push(p);
+    }
+    return products;
+  })(filenameArray, directory);
 }
 
-ProductCollection.prototype.handleClick = function(product){
-  let collection = this;
-  return function(event){
-    product.clicked++;
-    collection.rounds++;
-    collection.display();
-  };
-};
-
-ProductCollection.prototype.addAllProducts = function(imagesArray, directory){
-  let products = {};
-  for (let filename of imagesArray){
-    let p = new Product(filename, directory);
-    //can change element type here
-    //might replace this with a call to an element builder
-    let e = document.createElement('img');
-    e.src = p.filepath;
-    e.addEventListener('click', this.handleClick(p), {signal: controller.signal});
-    products[p.name] = {product: p, element: e};
+ProductCollection.prototype.eventListeners = function(type){
+  for(let product of this.allProducts){
+    if(type === 'add'){
+      product.listenerFunction = handleClick(product);
+      product.domNode.addEventListener('click', product.listenerFunction);
+    } 
+    else if (type === 'remove'){
+      product.domNode.removeEventListener('click', product.listenerFunction);
+    }
   }
-  this.allProducts = products;
+  let collection = this;
+  function handleClick(prod){
+    return function(event){
+      prod.clicked++;
+      collection.rounds++;
+      collection.update();
+      collection.display();
+    };
+  }
 };
 
-ProductCollection.prototype.display = function(){
-  if (this.rounds >= maxRounds) {
-    controller.abort();
+ProductCollection.prototype.isIn = function(prod, prodArray){
+  for(let otherProd of prodArray){
+    if(otherProd.name === prod.name){
+      return true;
+    }
+  }
+  return false;
+};
+
+ProductCollection.prototype.update = function(){
+  if (this.rounds >= this.maxRounds) {
+    localStorage.setItem('products', JSON.stringify(this));
+    this.eventListeners('remove');
     this.rounds = 0;
     this.displayResults();
     return;
   }
 
-  this.displayElement.innerHTML = '';
-  this.selectCurrent(3);
+  let newProducts = [];
+  while (newProducts.length < this.size && newProducts.length < this.allProducts.length){
+    let prod = this.allProducts[Math.floor(Math.random() * this.allProducts.length)];
+    if (this.isIn(prod, newProducts) || this.isIn(prod, this.currentProducts)){
+      continue;
+    }
+    else {
+      newProducts.push(prod);
+    }
+  }
+  this.currentProducts = newProducts;
 
-  for(let name in this.currentProducts){
-    let p = this.currentProducts[name].product;
-    let e = this.currentProducts[name].element;
-    p.shown++;
-    this.displayElement.appendChild(e);
+  localStorage.setItem('products', JSON.stringify(this));
+};
+
+ProductCollection.prototype.display = function(){
+  this.displayElement.innerHTML = '';
+
+  for (let prod of this.currentProducts){
+    prod.shown++;
+    this.displayElement.appendChild(prod.domNode);
   }
 };
 
@@ -66,11 +104,10 @@ ProductCollection.prototype.displayResults = function(){
   let clicks = [];
   let showns = [];
 
-  for(let p in this.allProducts){
-    let prod = this.allProducts[p].product;
-    labels.push(prod.name);
-    clicks.push(prod.clicked);
-    showns.push(prod.shown);
+  for(let p of this.allProducts){
+    labels.push(p.name);
+    clicks.push(p.clicked);
+    showns.push(p.shown);
   }
 
   const data = {
@@ -93,46 +130,69 @@ ProductCollection.prototype.displayResults = function(){
   const config = {
     type: 'bar',
     data: data,
-    options: {}
+    options: {
+      responsive: true,
+      maintainAspectRatio: true}
   };
 
-  let canv = document.getElementById('mychart');
-  const mychart = new Chart(canv, config);
-
+  let canv = document.getElementById('resultChart');
+  const resultChart = new Chart(canv, config);
 };
 
-function isIn(item, array){
-  for(let i of array){
-    if (i === item){
-      return true;
+ProductCollection.load = function(JSONProductCollection, filenames, dir, displayArea){
+  let allProducts = JSONProductCollection.allProducts;
+  let currentProducts = JSONProductCollection.currentProducts;
+  let maxRounds = JSONProductCollection.maxRounds;
+  let rounds = JSONProductCollection.rounds;
+  let size = JSONProductCollection.size;
+
+  let newCollection = new ProductCollection(filenames, dir, displayArea, maxRounds, size);
+
+  newCollection.rounds = rounds;
+
+  newCollection.allProducts = [];
+  for(let JSONProd of allProducts){
+    newCollection.allProducts.push(Product.load(JSONProd));
+  }
+
+  for(let currProd of currentProducts){
+    let name = currProd.name;
+    for(let prod of newCollection.allProducts){
+      if (name === prod.name){
+        newCollection.currentProducts.push(prod);
+      }
     }
   }
-  return false;
+  return newCollection;
+};
+
+function main(){
+  const filenames = ['bag.jpg', 'banana.jpg', 'bathroom.jpg', 'boots.jpg', 'breakfast.jpg', 'bubblegum.jpg', 'chair.jpg', 'cthulhu.jpg', 'dog-duck.jpg', 'pen.jpg', 'pet-sweep.jpg', 'scissors.jpg', 'shark.jpg', 'sweep.png', 'tauntaun.jpg', 'unicorn.jpg', 'water-can.jpg', 'wine-glass.jpg'];
+  const dir = 'img';
+  let mainHTML = document.querySelector('main');
+
+  if (localStorage.getItem('products')){
+    let products = ProductCollection.load(JSON.parse(localStorage.getItem('products')), filenames, dir, mainHTML);
+    products.eventListeners('add');
+    products.display();
+    if (products.rounds >= products.maxRounds){
+      products.update();
+    }
+  }
+  else {
+    let products = new ProductCollection(filenames, dir, mainHTML, 25, 3);
+    products.eventListeners('add');
+    products.update();
+    products.display();
+  }
+
+  let button = document.getElementById('resetButton');
+  button.addEventListener('click', clearSaved);
+  function clearSaved(event){
+    localStorage.removeItem('products');
+    location.reload();
+  }
 }
 
-ProductCollection.prototype.selectCurrent = function(howMany){
-  let newKeys = [];
-  let currentKeys =Object.keys(this.currentProducts);
-  let allKeys = Object.keys(this.allProducts);
-  this.currentProducts = {};
-
-  while (newKeys.length < howMany && newKeys.length <= allKeys.length){
-    let key = allKeys[Math.floor(Math.random() * allKeys.length)];
-    if (isIn(key, newKeys) || isIn(key, currentKeys)){
-      continue;
-    }
-    else {
-      newKeys.push(key);
-    }
-  }
-
-  for (let key of newKeys){
-    this.currentProducts[key] = this.allProducts[key];
-  }
-};
-
-let main = document.querySelector('main');
-let products = new ProductCollection(main);
-products.addAllProducts(images, imgDirectory);
-products.selectCurrent(3);
-products.display();
+//localStorage.removeItem('products');
+main();
