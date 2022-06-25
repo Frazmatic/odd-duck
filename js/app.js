@@ -34,6 +34,7 @@ function ProductCollection(filenameArray, directory, displayArea, maxRounds, sel
     }
     return products;
   })(filenameArray, directory);
+  this.chart = {labels: [], clicks: [], showns: []};
 }
 
 ProductCollection.prototype.eventListeners = function(type){
@@ -70,8 +71,8 @@ ProductCollection.prototype.update = function(){
   if (this.rounds >= this.maxRounds) {
     localStorage.setItem('products', JSON.stringify(this));
     this.eventListeners('remove');
-    this.rounds = 0;
     this.displayResults();
+    this.rounds = 0;
     return;
   }
 
@@ -99,6 +100,7 @@ ProductCollection.prototype.display = function(){
   }
 };
 
+//update() calls this to display chart after max rounds (default 25) reached
 ProductCollection.prototype.displayResults = function(){
   let labels = [];
   let clicks = [];
@@ -109,6 +111,12 @@ ProductCollection.prototype.displayResults = function(){
     clicks.push(p.clicked);
     showns.push(p.shown);
   }
+
+  //store chart data in localStorage
+  this.chart.labels = labels;
+  this.chart.clicks = clicks;
+  this.chart.showns = showns;
+  localStorage.setItem('products', JSON.stringify(this));
 
   const data = {
     labels: labels,
@@ -172,7 +180,9 @@ function main(){
   let mainHTML = document.querySelector('main');
 
   if (localStorage.getItem('products')){
+    //if local storage exists on refresh or reload of page; load the products data.
     let products = ProductCollection.load(JSON.parse(localStorage.getItem('products')), filenames, dir, mainHTML);
+    //charts data will be stored if a chart has been generated; refresh after chart has been displayed to load it via this parse
     products.eventListeners('add');
     products.display();
     if (products.rounds >= products.maxRounds){
