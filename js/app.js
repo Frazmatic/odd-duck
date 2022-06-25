@@ -219,5 +219,4 @@ function main(){
   }
 }
 
-localStorage.removeItem('products');
 main();
