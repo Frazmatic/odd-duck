@@ -1,13 +1,16 @@
 'use strict';
 
+//the basic object tpe for storing name, image, shown/clicked data
 function Product(filename, directory){
   this.name = filename.split('.')[0];
   this.filepath = `./${directory}/${filename}`;
+  //could convert element type or call a constructor for nested elements here
   this.domNode = (function(filepath){let img = document.createElement('img'); img.src = filepath; return img;})(this.filepath);
   this.shown = 0;
   this.clicked = 0;
 }
 
+//process individual Product from local storage 
 Product.load = function(JSONProduct){
   // './img/bag.jpg'
   let fileInformation = JSONProduct.filepath.split('/');
@@ -20,12 +23,14 @@ Product.load = function(JSONProduct){
 
 };
 
+//manage a group of Products; most logic for the program is handled here.
 function ProductCollection(filenameArray, directory, displayArea, maxRounds, selectionSize){
   this.displayElement = displayArea;
   this.rounds = 0;
   this.maxRounds = maxRounds;
   this.size = selectionSize;
   this.currentProducts = [];
+  //bulid primary products array: where all information is stored:
   this.allProducts = (function(filenameArray, directory){
     let products = [];
     for(let filename of filenameArray){
@@ -37,9 +42,11 @@ function ProductCollection(filenameArray, directory, displayArea, maxRounds, sel
   this.chart = {labels: [], clicks: [], showns: []};
 }
 
+//go through each Product in primary product array and add an event listener with handler function
 ProductCollection.prototype.eventListeners = function(type){
   for(let product of this.allProducts){
     if(type === 'add'){
+      //listener function added to the product as a property so that it can be removed later
       product.listenerFunction = handleClick(product);
       product.domNode.addEventListener('click', product.listenerFunction);
     } 
@@ -58,6 +65,7 @@ ProductCollection.prototype.eventListeners = function(type){
   }
 };
 
+//utility method for checking contents of a Product array
 ProductCollection.prototype.isIn = function(prod, prodArray){
   for(let otherProd of prodArray){
     if(otherProd.name === prod.name){
@@ -67,8 +75,11 @@ ProductCollection.prototype.isIn = function(prod, prodArray){
   return false;
 };
 
+//runs on click; this is the primary driver of the program, the "main loop", so to speak.
 ProductCollection.prototype.update = function(){
+  //ends program, makes chart when max rounds (25) reached
   if (this.rounds >= this.maxRounds) {
+    //Product ARRAy saved to localStorage WITH CHART DATA here
     localStorage.setItem('products', JSON.stringify(this));
     this.eventListeners('remove');
     this.displayResults();
@@ -88,9 +99,11 @@ ProductCollection.prototype.update = function(){
   }
   this.currentProducts = newProducts;
 
+  //Product array is saved to localStorage here
   localStorage.setItem('products', JSON.stringify(this));
 };
 
+//display the product images
 ProductCollection.prototype.display = function(){
   this.displayElement.innerHTML = '';
 
@@ -147,6 +160,7 @@ ProductCollection.prototype.displayResults = function(){
   const resultChart = new Chart(canv, config);
 };
 
+//for loading from local storage; called by main when localStorage for this object exists
 ProductCollection.load = function(JSONProductCollection, filenames, dir, displayArea){
   let allProducts = JSONProductCollection.allProducts;
   let currentProducts = JSONProductCollection.currentProducts;
@@ -174,6 +188,7 @@ ProductCollection.load = function(JSONProductCollection, filenames, dir, display
   return newCollection;
 };
 
+//this is what initially runs on page load
 function main(){
   const filenames = ['bag.jpg', 'banana.jpg', 'bathroom.jpg', 'boots.jpg', 'breakfast.jpg', 'bubblegum.jpg', 'chair.jpg', 'cthulhu.jpg', 'dog-duck.jpg', 'pen.jpg', 'pet-sweep.jpg', 'scissors.jpg', 'shark.jpg', 'sweep.png', 'tauntaun.jpg', 'unicorn.jpg', 'water-can.jpg', 'wine-glass.jpg'];
   const dir = 'img';
@@ -204,5 +219,5 @@ function main(){
   }
 }
 
-//localStorage.removeItem('products');
+localStorage.removeItem('products');
 main();
